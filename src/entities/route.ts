@@ -1,5 +1,5 @@
 import invariant from 'tiny-invariant'
-import { Currency, Price, Token } from '@uniswap/sdk-core'
+import { ChainId, Currency, Price, Token } from '@vnaysn/jediswap-sdk-core'
 
 import { Pair } from './pair'
 
@@ -11,7 +11,7 @@ export class Route<TInput extends Currency, TOutput extends Currency> {
 
   public constructor(pairs: Pair[], input: TInput, output: TOutput) {
     invariant(pairs.length > 0, 'PAIRS')
-    const chainId: number = pairs[0].chainId
+    const chainId: ChainId = pairs[0].chainId
     invariant(
       pairs.every(pair => pair.chainId === chainId),
       'CHAIN_IDS'
@@ -51,7 +51,7 @@ export class Route<TInput extends Currency, TOutput extends Currency> {
     return (this._midPrice = new Price(this.input, this.output, reduced.denominator, reduced.numerator))
   }
 
-  public get chainId(): number {
+  public get chainId(): ChainId {
     return this.pairs[0].chainId
   }
 }
