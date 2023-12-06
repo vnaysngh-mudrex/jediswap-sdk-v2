@@ -4,7 +4,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "5.0.0",
+  "version": "6.0.0",
   "description": "🛠 An SDK for building applications on top of Jediswap V2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -28,7 +28,7 @@
     "@ethersproject/address": "^5.0.0",
     "@ethersproject/solidity": "^5.0.0",
     "@uniswap/sdk-core": "^4.0.7",
-    "@vnaysn/jediswap-sdk-core": "^8.0.0",
+    "@vnaysn/jediswap-sdk-core": "^9.0.0",
     "tiny-invariant": "^1.1.0",
     "tiny-warning": "^1.0.3"
   },
