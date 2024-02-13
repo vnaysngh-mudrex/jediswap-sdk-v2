@@ -1,4 +1,13 @@
-import { BigintIsh, Price, sqrt, Token, CurrencyAmount, Percent, ChainId } from '@vnaysn/jediswap-sdk-core'
+import {
+  BigintIsh,
+  Price,
+  sqrt,
+  Token,
+  CurrencyAmount,
+  Percent,
+  ChainId,
+  PAIR_CLASS_HASH
+} from '@vnaysn/jediswap-sdk-core'
 import invariant from 'tiny-invariant'
 import JSBI from 'jsbi'
 import { pack, keccak256 } from '@ethersproject/solidity'
@@ -16,9 +25,13 @@ import {
   ZERO,
   BASIS_POINTS,
   ONE_HUNDRED_PERCENT,
-  ZERO_PERCENT
+  ZERO_PERCENT,
+  DEFAULT_CHAIN_ID,
+  FEE_TO_SETTER_ADDRESS,
+  PAIR_PROXY_CLASS_HASH
 } from '../constants'
 import { InsufficientReservesError, InsufficientInputAmountError } from '../errors'
+import { ec, hash } from 'starknet'
 
 export const computePairAddress = ({
   factoryAddress,
@@ -36,12 +49,43 @@ export const computePairAddress = ({
     INIT_CODE_HASH
   )
 }
+
+let PAIR_ADDRESS_CACHE: { [token0Address: string]: { [token1Address: string]: string } } = {}
+
 export class Pair {
   public readonly liquidityToken: Token
   private readonly tokenAmounts: [CurrencyAmount<Token>, CurrencyAmount<Token>]
 
   public static getAddress(tokenA: Token, tokenB: Token): string {
-    return computePairAddress({ factoryAddress: FACTORY_ADDRESS, tokenA, tokenB })
+    const tokens = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
+
+    const { calculateContractAddressFromHash } = hash
+
+    const salt = ec.starkCurve.pedersen(tokens[0].address, tokens[1].address)
+
+    const contructorCalldata = [
+      PAIR_CLASS_HASH[tokens[0].chainId ?? DEFAULT_CHAIN_ID],
+      tokens[0].address,
+      tokens[1].address,
+      FEE_TO_SETTER_ADDRESS[tokens[0].chainId ?? DEFAULT_CHAIN_ID]
+    ]
+
+    if (PAIR_ADDRESS_CACHE?.[tokens[0].address]?.[tokens[1].address] === undefined) {
+      PAIR_ADDRESS_CACHE = {
+        ...PAIR_ADDRESS_CACHE,
+        [tokens[0].address]: {
+          ...PAIR_ADDRESS_CACHE?.[tokens[0].address],
+          [tokens[1].address]: calculateContractAddressFromHash(
+            salt,
+            PAIR_PROXY_CLASS_HASH[tokens[0].chainId ?? DEFAULT_CHAIN_ID],
+            contructorCalldata,
+            FACTORY_ADDRESS[tokens[0].chainId ?? DEFAULT_CHAIN_ID]
+          )
+        }
+      }
+    }
+
+    return PAIR_ADDRESS_CACHE[tokens[0].address][tokens[1].address]
   }
 
   public constructor(currencyAmountA: CurrencyAmount<Token>, tokenAmountB: CurrencyAmount<Token>) {
